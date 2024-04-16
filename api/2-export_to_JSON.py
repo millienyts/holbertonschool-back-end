@@ -7,45 +7,62 @@ import json
 import requests
 from sys import argv
 
-
 def get_employee(id=None):
     '''
-        Using this REST API, for a given employee ID,
-        returns information about his/her TODO list progress.
+        Function to retrieve employee information
+        using a REST API, based on the given employee ID.
     '''
-    # If an ID is provided as a command-line argument, use it
+    # Check if an ID is provided as a command line argument
     if len(argv) > 1:
         try:
-            id = int(argv[1])
+            id = int(argv[1])  # Set id to the provided command line argument
         except ValueError:
             pass
+            return
 
-    # If ID is provided or obtained from command-line, proceed
     if isinstance(id, int):
-        # Fetch user data and todo list for the given ID
-        user_response = requests.get(f"https://jsonplaceholder.typicode.com/users/{id}")
-        todos_response = requests.get(f"https://jsonplaceholder.typicode.com/todos/?userId={id}")
+        # Retrieve user information
+        user = requests.get(f"https://jsonplaceholder.typicode.com/users/{id}")
+        # Retrieve todo list for the user
+        to_dos = requests.get(f"https://jsonplaceholder.typicode.com/todos/?userId={id}")
 
-        # Check if responses are successful
-        if user_response.status_code == 200 and todos_response.status_code == 200:
-            user_data = user_response.json()
-            todos_data = todos_response.json()
+        # Check if requests were successful
+        if to_dos.status_code == 200 and user.status_code == 200:
+            # Convert response text to JSON format
+            user = json.loads(user.text)
+            to_dos = json.loads(to_dos.text)
 
-            # Extract relevant information
-            total_tasks = len(todos_data)
-            completed_tasks = [todo for todo in todos_data if todo['completed']]
-            num_completed_tasks = len(completed_tasks)
-            completed_task_titles = [todo['title'] for todo in completed_tasks]
+            total_tasks = len(to_dos)
+            tasks_completed = 0
+            titles_completed = []
 
-            # Print user information and completed tasks
-            print(f"Employee {user_data['name']} is done with tasks({num_completed_tasks}/{total_tasks}):")
-            for title in completed_task_titles:
-                print(f"\t{title}")
+            # Count completed tasks and collect their titles
+            for to_do in to_dos:
+                if to_do['completed'] is True:
+                    tasks_completed += 1
+                    titles_completed.append(to_do['title'])
 
-            # Write data to JSON file
-            json_data = {str(user_data['id']): [{'task': todo['title'], 'completed': todo['completed'], 'username': user_data['username']} for todo in todos_data]}
-            with open(f"{user_data['id']}.json", 'w') as json_file:
-                json.dump(json_data, json_file)
+            tasks_completed = len(titles_completed)
+
+            # Print employee's task completion status
+            print(f"Employee {user['name']} has completed tasks ({tasks_completed}/{total_tasks}):")
+            for title in titles_completed:
+                print(f"\t {title}")
+
+            # Prepare data for JSON file
+            json_dict = {}
+            user_list = []
+            for task in to_dos:
+                user_dict = {'task': task['title'],
+                             'completed': task['completed'],
+                             'username': user['username']}
+                user_list.append(user_dict)
+            json_dict[user['id']] = user_list
+
+            # Write JSON data to a file
+            with open(f"{user['id']}.json", 'w') as json_file:
+                json.dump(json_dict, json_file)
+
 
 if __name__ == '__main__':
     get_employee()
