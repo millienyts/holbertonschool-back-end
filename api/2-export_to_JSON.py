@@ -1,19 +1,19 @@
 #!/usr/bin/python3
 '''
-    This script interacts with a REST API to retrieve information about an employee's TODO list progress.
+    Api REST
 '''
 
 import json
 import requests
 from sys import argv
 
+
 def get_employee(id=None):
     '''
-    Retrieves and displays information about an employee's tasks based on the employee ID.
-    If no ID is provided, it retrieves tasks based on the command line argument.
+        using this REST API, for a given employee ID,
+        returns information about his/her TODO list progress.
     '''
-
-    # Check if an ID is provided as a command line argument
+    # check if argv[1] is a number int, it means we are using argv
     if len(argv) > 1:
         try:
             id = int(argv[1])
@@ -21,48 +21,50 @@ def get_employee(id=None):
             pass
             return
 
-    # Retrieve employee data and their corresponding tasks
     if isinstance(id, int):
-        user_response = requests.get(f"https://jsonplaceholder.typicode.com/users/{id}")
-        tasks_response = requests.get(f"https://jsonplaceholder.typicode.com/todos/?userId={id}")
+        user = requests.get(f"https://jsonplaceholder.typicode.com/users/{id}")
+        to_dos = requests.get(
+            f"https://jsonplaceholder.typicode.com/todos/?userId={id}"
+            )
 
-        if tasks_response.status_code == 200 and user_response.status_code == 200:
-            user = json.loads(user_response.text)
-            tasks = json.loads(tasks_response.text)
+        if to_dos.status_code == 200 and user.status_code == 200:
+            user = json.loads(user.text)
+            to_dos = json.loads(to_dos.text)
 
-            total_tasks = len(tasks)
+            total_tasks = len(to_dos)
             tasks_completed = 0
-            completed_task_titles = []
+            titles_completed = []
 
-            # Count completed tasks and store their titles
-            for task in tasks:
-                if task['completed']:
+            for to_do in to_dos:
+                
+                if to_do['completed'] is True:
                     tasks_completed += 1
-                    completed_task_titles.append(task['title'])
+                    titles_completed.append(to_do['title'])
 
-            tasks_completed = len(completed_task_titles)
+            tasks_completed = len(titles_completed)
 
-            # Print employee's task completion status
-            print(f"Employee {user['name']} has completed {tasks_completed}/{total_tasks} tasks:")
-            for title in completed_task_titles:
+            
+            print(f"Employee {user['name']} is done \
+                  with tasks({tasks_completed}/{total_tasks})")
+            for title in titles_completed:
                 print(f"\t {title}")
 
-            # Prepare data for JSON output
-            json_data = {}
-            tasks_data = []
-            for task in tasks:
-                task_data = {
-                    'task': task['title'],
-                    'completed': task['completed'],
-                    'username': user['username']
-                }
-                tasks_data.append(task_data)
-            json_data[user['id']] = tasks_data
+            # Data for json of a single user
+            json_dict = {}
+            user_list = []
+            for task in to_dos:
+                user_dict = {}
+                user_dict.update(
+                    {'task': task['title'],
+                     'completed': task['completed'],
+                     'username': user['username']}
+                    )
+                user_list.append(user_dict)
+            json_dict[user['id']] = user_list
 
-            # Write JSON data to a file
             with open(f"{user['id']}.json", 'w') as json_file:
-                json.dump(json_data, json_file)
+                json.dump(json_dict, json_file)
+
 
 if __name__ == '__main__':
     get_employee()
-
